@@ -1,0 +1,6 @@
+{
+  "name": "10/12 – Thanh xuân mang tên chúng ta",
+  "description": "Website lớp 10/12 - Không gian trực tuyến lưu giữ kỷ niệm, danh sách thành viên, thông báo, thời khóa biểu và thanh xuân học trò.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
