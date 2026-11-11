@@ -5,18 +5,19 @@
     "mustChangePassword": false
   },
   "themeSettings": {
-    "mainBg": "#111111",
-    "secondaryBg": "#1B1B1B",
+    "mainBg": "#181512",
+    "secondaryBg": "#241f1a",
     "cardBg": "#22201E",
-    "textPrimary": "#F0EBDD",
-    "textSecondary": "#A8A29A",
-    "accentColor": "#B9A58A",
-    "borderColor": "#38342F",
-    "headingFont": "Caveat",
-    "bodyFont": "Be Vietnam Pro",
+    "textPrimary": "#F5EBD7",
+    "textSecondary": "#B8AA97",
+    "accentColor": "#C69766",
+    "borderColor": "#3D342A",
+    "headingFont": "'Patrick Hand', cursive, sans-serif",
+    "bodyFont": "'Nunito', sans-serif",
     "borderRadius": "16px",
     "enableAnimations": true,
-    "enableScrapbookEffects": true
+    "enableScrapbookEffects": true,
+    "themePreset": "sepia-vintage"
   },
   "layoutSettings": {
     "galleryLayout": "masonry",

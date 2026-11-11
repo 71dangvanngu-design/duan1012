@@ -17,6 +17,8 @@ import { ScrapbookFooter } from './components/public/ScrapbookFooter';
 import { AdminLoginModal } from './components/admin/AdminLoginModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { Lock, Feather, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
+import { applyTheme } from './utils/theme';
+import { subscribeAuth } from './services/firebase';
 
 export default function App() {
   const [store, setStore] = useState<ScrapbookStore | null>(null);
@@ -35,6 +37,9 @@ export default function App() {
       // 1. Load content store
       const data = await api.getContent();
       setStore(data);
+      if (data.themeSettings) {
+        applyTheme(data.themeSettings);
+      }
 
       // 2. Check if admin session already exists
       try {
@@ -57,9 +62,25 @@ export default function App() {
     loadData();
   }, [loadData]);
 
+  // Listen to Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = subscribeAuth((user) => {
+      if (user) {
+        setCurrentUser({
+          username: user.email?.split('@')[0] || 'Admin',
+          mustChangePassword: false,
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Handler when admin saves changes in the CMS
   const handleUpdateStore = (updated: ScrapbookStore) => {
     setStore(updated);
+    if (updated.themeSettings) {
+      applyTheme(updated.themeSettings);
+    }
   };
 
   // Handler for admin logout

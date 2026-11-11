@@ -132,7 +132,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
           <form onSubmit={handleLogin} className="space-y-4 text-xs font-sans-body">
             <div>
               <label className="block text-[#A8A29A] font-journal text-sm mb-1">
-                Tên đăng nhập
+                Tên đăng nhập hoặc Email Quản trị
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-[#A8A29A] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -141,7 +141,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Admin"
+                  placeholder="Admin hoặc admin@lop1012.edu.vn"
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#22201E] border border-[#38342F] text-sm text-[#F0EBDD] focus:outline-hidden focus:border-[#B9A58A]"
                 />
               </div>
@@ -149,7 +149,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
             <div>
               <label className="block text-[#A8A29A] font-journal text-sm mb-1">
-                Mật khẩu
+                Mật khẩu (Firebase Auth)
               </label>
               <div className="relative">
                 <KeyRound className="w-4 h-4 text-[#A8A29A] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -175,9 +175,9 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             {/* Quick credentials hint note */}
             <div className="p-3 rounded-xl bg-[#22201E] border border-[#38342F] text-[11px] text-[#A8A29A] space-y-1">
               <span className="text-[#B9A58A] font-journal text-xs font-semibold block">
-                Thông tin khởi tạo ban đầu:
+                Xác thực bảo mật Firebase Authentication:
               </span>
-              <p>Username: <strong className="text-[#F0EBDD]">Admin</strong> • Password: <strong className="text-[#F0EBDD]">123456789</strong></p>
+              <p>Tài khoản: <strong className="text-[#F0EBDD]">Admin</strong> (hoặc <strong className="text-[#F0EBDD]">admin@lop1012.edu.vn</strong>) • Mật khẩu: <strong className="text-[#F0EBDD]">123456789</strong></p>
             </div>
 
             <button

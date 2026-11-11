@@ -11,32 +11,34 @@
     --font-hand: 'Caveat', cursive, sans-serif;
     --font-journal: 'Patrick Hand', cursive, sans-serif;
     --font-body: 'Nunito', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+    --font-size-base: 16px;
   }
 
   html {
     font-family: var(--font-body);
-    background-color: #111111;
-    color: #F0EBDD;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
     scroll-behavior: smooth;
   }
 }
 
-/* Handwritten Typography */
+/* Handwritten Typography using Dynamic CSS Variables */
 .font-handwriting {
-  font-family: 'Caveat', cursive, sans-serif;
+  font-family: var(--font-hand);
 }
 
 .font-journal {
-  font-family: 'Patrick Hand', cursive, sans-serif;
+  font-family: var(--font-journal);
 }
 
 .font-sans-body {
-  font-family: 'Nunito', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 /* Dark Notebook Lined Paper Effect */
 .notebook-lined {
-  background-color: #1a1917;
+  background-color: var(--bg-sec);
   background-image: 
     linear-gradient(rgba(185, 165, 138, 0.08) 1px, transparent 1px);
   background-size: 100% 32px;
@@ -74,8 +76,8 @@
 
 /* Polaroid Photo Card */
 .polaroid-card {
-  background-color: #262422;
-  border: 1px solid #3d3934;
+  background-color: var(--bg-sec);
+  border: 1px solid var(--border);
   padding: 12px 12px 28px 12px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -84,7 +86,7 @@
 .polaroid-card:hover {
   transform: translateY(-6px) scale(1.02);
   box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.7);
-  border-color: #B9A58A;
+  border-color: var(--accent);
 }
 
 /* Custom Dark Academia Scrollbar */
@@ -94,14 +96,14 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #111111;
+  background: var(--bg-main);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #38342F;
+  background: var(--border);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #B9A58A;
+  background: var(--accent);
 }

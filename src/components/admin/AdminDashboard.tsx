@@ -33,9 +33,12 @@ import {
   ScrapbookJournal, 
   ScrapbookActivity,
   GalleryLayoutType,
-  GallerySpacingType
+  GallerySpacingType,
+  ThemeSettings
 } from '../../types/scrapbook';
 import { api } from '../../services/api';
+import { applyTheme, THEME_PRESETS } from '../../utils/theme';
+import { Palette, Type } from 'lucide-react';
 
 interface AdminDashboardProps {
   store: ScrapbookStore;
@@ -1634,6 +1637,201 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="w-full px-3.5 py-2 rounded-xl bg-[#22201E] border border-[#38342F] text-xs text-[#F0EBDD]"
                     />
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Theme, Font & Color Customizer */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-[#1B1B1B] border border-[#38342F] space-y-6 text-xs">
+              <div className="flex items-center gap-2 border-b border-[#38342F] pb-3">
+                <Palette className="w-5 h-5 text-[#B9A58A]" />
+                <h3 className="font-handwriting text-2xl font-bold text-[#F0EBDD]">
+                  Tùy Biến Giao Diện, Màu Sắc & Font Chữ (Live Customizer)
+                </h3>
+              </div>
+
+              {/* Theme Presets */}
+              <div className="space-y-3">
+                <label className="block text-[#A8A29A] font-semibold text-sm">
+                  Gói Giao Diện Mẫu (Presets)
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { id: 'dark-academia', label: 'Dark Academia', desc: 'Cổ điển, trầm ấm', bg: '#111111', accent: '#B9A58A' },
+                    { id: 'sepia-vintage', label: 'Sepia Vintage', desc: 'Giấy báo hoài niệm', bg: '#181512', accent: '#C69766' },
+                    { id: 'midnight-scholar', label: 'Midnight Scholar', desc: 'Bầu trời đêm sâu thẳm', bg: '#0D1117', accent: '#79C0FF' },
+                    { id: 'forest-notebook', label: 'Forest Notebook', desc: 'Sổ tay xanh rừng', bg: '#0F1715', accent: '#7EB693' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        const presetData = THEME_PRESETS[preset.id];
+                        if (presetData) {
+                          const updated: ThemeSettings = {
+                            ...(draftStore.themeSettings || {}),
+                            ...presetData,
+                            themePreset: preset.id as any,
+                          } as ThemeSettings;
+                          setDraftStore({
+                            ...draftStore,
+                            themeSettings: updated,
+                          });
+                          applyTheme(updated);
+                        }
+                      }}
+                      className="p-3 rounded-2xl border text-left transition-all cursor-pointer hover:scale-[1.02] flex flex-col justify-between"
+                      style={{
+                        backgroundColor: preset.bg,
+                        borderColor: draftStore.themeSettings?.themePreset === preset.id ? preset.accent : '#38342F',
+                        borderWidth: draftStore.themeSettings?.themePreset === preset.id ? '2px' : '1px',
+                      }}
+                    >
+                      <div>
+                        <span className="font-bold text-[#F0EBDD] block">{preset.label}</span>
+                        <span className="text-[10px] text-[#A8A29A]">{preset.desc}</span>
+                      </div>
+                      <div className="mt-3 flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: preset.accent }} />
+                        <span className="text-[10px]" style={{ color: preset.accent }}>Áp dụng</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font Sizing */}
+              <div className="space-y-3 pt-3 border-t border-[#38342F]">
+                <div className="flex items-center gap-2">
+                  <Type className="w-4 h-4 text-[#B9A58A]" />
+                  <label className="text-[#A8A29A] font-semibold text-sm">
+                    Kích Thước Chữ Toàn Trang
+                  </label>
+                </div>
+                <div className="flex items-center gap-3">
+                  {[
+                    { id: 'sm', label: 'Nhỏ (14px)', desc: 'Gọn gàng' },
+                    { id: 'base', label: 'Chuẩn (16px)', desc: 'Mặc định cân đối' },
+                    { id: 'lg', label: 'Lớn (18px)', desc: 'Dễ đọc, nổi bật' },
+                  ].map((sizeOpt) => {
+                    const currentSize = draftStore.themeSettings?.fontSize || 'base';
+                    const isSelected = currentSize === sizeOpt.id;
+                    return (
+                      <button
+                        key={sizeOpt.id}
+                        type="button"
+                        onClick={() => {
+                          const updated: ThemeSettings = {
+                            ...(draftStore.themeSettings || {}),
+                            fontSize: sizeOpt.id as any,
+                          } as ThemeSettings;
+                          setDraftStore({
+                            ...draftStore,
+                            themeSettings: updated,
+                          });
+                          applyTheme(updated);
+                        }}
+                        className={`flex-1 py-2.5 px-3 rounded-xl border text-center transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#B9A58A] text-[#111111] font-bold border-[#B9A58A]'
+                            : 'bg-[#22201E] text-[#A8A29A] border-[#38342F] hover:text-[#F0EBDD]'
+                        }`}
+                      >
+                        <div className="text-xs">{sizeOpt.label}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Heading Font Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[#38342F]">
+                <div>
+                  <label className="block text-[#A8A29A] mb-1 font-semibold">Font Tiêu Đề</label>
+                  <select
+                    value={draftStore.themeSettings?.headingFont || "'Caveat', cursive, sans-serif"}
+                    onChange={(e) => {
+                      const updated: ThemeSettings = {
+                        ...(draftStore.themeSettings || {}),
+                        headingFont: e.target.value,
+                      } as ThemeSettings;
+                      setDraftStore({
+                        ...draftStore,
+                        themeSettings: updated,
+                      });
+                      applyTheme(updated);
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#22201E] border border-[#38342F] text-xs text-[#F0EBDD] cursor-pointer"
+                  >
+                    <option value="'Caveat', cursive, sans-serif">Caveat (Chữ viết tay bay bổng)</option>
+                    <option value="'Patrick Hand', cursive, sans-serif">Patrick Hand (Chữ viết tay nhật ký)</option>
+                    <option value="'Playfair Display', serif, sans-serif">Playfair Display (Chữ in cổ điển)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[#A8A29A] mb-1 font-semibold">Font Nội Dung</label>
+                  <select
+                    value={draftStore.themeSettings?.bodyFont || "'Nunito', 'Be Vietnam Pro', sans-serif"}
+                    onChange={(e) => {
+                      const updated: ThemeSettings = {
+                        ...(draftStore.themeSettings || {}),
+                        bodyFont: e.target.value,
+                      } as ThemeSettings;
+                      setDraftStore({
+                        ...draftStore,
+                        themeSettings: updated,
+                      });
+                      applyTheme(updated);
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#22201E] border border-[#38342F] text-xs text-[#F0EBDD] cursor-pointer"
+                  >
+                    <option value="'Nunito', 'Be Vietnam Pro', system-ui, sans-serif">Nunito (Thân thiện, ấm áp)</option>
+                    <option value="'Be Vietnam Pro', sans-serif">Be Vietnam Pro (Trang nhã hiện đại)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Color Customizers */}
+              <div className="pt-3 border-t border-[#38342F] space-y-3">
+                <label className="block text-[#A8A29A] font-semibold text-sm">
+                  Tùy Biến Bảng Màu Chi Tiết
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { key: 'mainBg', label: 'Nền chính' },
+                    { key: 'secondaryBg', label: 'Nền phụ' },
+                    { key: 'textPrimary', label: 'Chữ chính' },
+                    { key: 'textSecondary', label: 'Chữ phụ' },
+                    { key: 'accentColor', label: 'Màu nhấn' },
+                    { key: 'borderColor', label: 'Màu viền' },
+                  ].map((colorItem) => {
+                    const colorVal = (draftStore.themeSettings as any)?.[colorItem.key] || '#111111';
+                    return (
+                      <div key={colorItem.key} className="p-2.5 rounded-xl bg-[#22201E] border border-[#38342F] flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-[#A8A29A]">{colorItem.label}</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={colorVal.startsWith('#') && colorVal.length === 7 ? colorVal : '#111111'}
+                            onChange={(e) => {
+                              const updated: ThemeSettings = {
+                                ...(draftStore.themeSettings || {}),
+                                [colorItem.key]: e.target.value,
+                              } as ThemeSettings;
+                              setDraftStore({
+                                ...draftStore,
+                                themeSettings: updated,
+                              });
+                              applyTheme(updated);
+                            }}
+                            className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent"
+                          />
+                          <span className="text-[10px] font-mono text-[#F0EBDD]">{colorVal}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

@@ -1,0 +1,6 @@
+{
+  "summary":  "Kế hoạch chi tiết hoàn thiện và kiểm thử toàn diện website lớp 10/12 theo phong cách Dark Academia: tích hợp Firebase Authentication thực tế, lưu trữ Firestore cho toàn bộ dữ liệu (hình ảnh, bài viết, thành viên, cài đặt), cập nhật thời gian thực giao diện/màu sắc/font chữ, kiểm tra quyền hạn và phản hồi responsive.",
+  "updatedAt":  "2026-11-11T11:33:33.101074308Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

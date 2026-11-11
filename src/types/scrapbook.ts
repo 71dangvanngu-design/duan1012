@@ -11,6 +11,8 @@ export interface ThemeSettings {
   borderRadius: string;
   enableAnimations: boolean;
   enableScrapbookEffects: boolean;
+  fontSize?: 'sm' | 'base' | 'lg';
+  themePreset?: 'dark-academia' | 'sepia-vintage' | 'midnight-scholar' | 'custom';
 }
 
 export type GalleryLayoutType = 'masonry' | 'grid' | 'polaroid' | 'list';

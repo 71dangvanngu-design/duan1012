@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "ClassConfig": {
+      "title": "ClassConfig",
+      "description": "Configuration and metadata for class 10/12",
+      "type": "object",
+      "properties": {
+        "className": { "type": "string" },
+        "slogan": { "type": "string" },
+        "teacher": { "type": "string" },
+        "teacherSubject": { "type": "string" },
+        "teacherPhone": { "type": "string" },
+        "teacherEmail": { "type": "string" },
+        "teacherMessage": { "type": "string" },
+        "totalStudents": { "type": "number" },
+        "academicYear": { "type": "string" },
+        "startDate": { "type": "string" },
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "heroDescription": { "type": "string" },
+        "classNote": { "type": "string" },
+        "coverPhotoUrl": { "type": "string" },
+        "achievements": { "type": "string" }
+      },
+      "required": ["className", "slogan", "teacher"]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "Student in class 10/12",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "nickname": { "type": "string" },
+        "role": { "type": "string" },
+        "bio": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name", "role"]
+    },
+    "GalleryImage": {
+      "title": "GalleryImage",
+      "description": "Photo in scrapbook gallery",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "caption": { "type": "string" },
+        "url": { "type": "string" },
+        "albumId": { "type": "string" },
+        "date": { "type": "string" },
+        "featured": { "type": "boolean" },
+        "rotation": { "type": "number" }
+      },
+      "required": ["title", "url"]
+    },
+    "Album": {
+      "title": "Album",
+      "description": "Album category for photos",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Journal": {
+      "title": "Journal",
+      "description": "Scrapbook handwritten journal article",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "date": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["title", "content", "author"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "Class activity or event",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["title", "date"]
+    }
+  },
+  "firestore": {
+    "/site_config/{configId}": {
+      "schema": "ClassConfig",
+      "description": "Global class configuration, theme and layout settings"
+    },
+    "/members/{memberId}": {
+      "schema": "Member",
+      "description": "Class 10/12 student records"
+    },
+    "/gallery/{imageId}": {
+      "schema": "GalleryImage",
+      "description": "Scrapbook gallery photos"
+    },
+    "/albums/{albumId}": {
+      "schema": "Album",
+      "description": "Photo albums"
+    },
+    "/journals/{journalId}": {
+      "schema": "Journal",
+      "description": "Handwritten journal stories"
+    },
+    "/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Extracurricular activities and milestones"
+    }
+  }
+}
