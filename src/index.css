@@ -2,57 +2,106 @@
 
 @layer base {
   :root {
-    --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
-    --font-serif: 'Playfair Display', Georgia, serif;
+    --bg-main: #111111;
+    --bg-sec: #1B1B1B;
+    --text-primary: #F0EBDD;
+    --text-secondary: #A8A29A;
+    --accent: #B9A58A;
+    --border: #38342F;
+    --font-hand: 'Caveat', cursive, sans-serif;
+    --font-journal: 'Patrick Hand', cursive, sans-serif;
+    --font-body: 'Nunito', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
   }
 
   html {
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
+    background-color: #111111;
+    color: #F0EBDD;
     scroll-behavior: smooth;
   }
 }
 
-.font-serif-title {
-  font-family: 'Playfair Display', Georgia, serif;
+/* Handwritten Typography */
+.font-handwriting {
+  font-family: 'Caveat', cursive, sans-serif;
+}
+
+.font-journal {
+  font-family: 'Patrick Hand', cursive, sans-serif;
 }
 
 .font-sans-body {
-  font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  font-family: 'Nunito', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
 }
 
-/* Glassmorphism & aesthetic youth accents */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+/* Dark Notebook Lined Paper Effect */
+.notebook-lined {
+  background-color: #1a1917;
+  background-image: 
+    linear-gradient(rgba(185, 165, 138, 0.08) 1px, transparent 1px);
+  background-size: 100% 32px;
+  line-height: 32px;
 }
 
-.glass-card-hover {
+/* Scrapbook Washi Tape Strips */
+.washi-tape {
+  position: relative;
+}
+
+.washi-tape::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 90px;
+  height: 24px;
+  background-color: rgba(185, 165, 138, 0.45);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border-left: 2px dashed rgba(255, 255, 255, 0.25);
+  border-right: 2px dashed rgba(255, 255, 255, 0.25);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.washi-tape-angle::before {
+  top: -10px;
+  left: 20px;
+  transform: rotate(-12deg);
+  width: 70px;
+}
+
+/* Polaroid Photo Card */
+.polaroid-card {
+  background-color: #262422;
+  border: 1px solid #3d3934;
+  padding: 12px 12px 28px 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 30px -10px rgba(30, 58, 138, 0.12);
+.polaroid-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.7);
+  border-color: #B9A58A;
 }
 
-/* Custom subtle scrollbar */
+/* Custom Dark Academia Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #111111;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #38342F;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #B9A58A;
 }
-

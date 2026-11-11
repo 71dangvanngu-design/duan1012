@@ -1,0 +1,569 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import express, { Request, Response, NextFunction } from 'express';
+import { createServer as createViteServer } from 'vite';
+
+const app = express();
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const isProd = process.env.NODE_ENV === 'production';
+
+// Ensure data and uploads directories exist
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const UPLOADS_DIR = path.resolve(DATA_DIR, 'uploads');
+const STORE_PATH = path.resolve(DATA_DIR, 'store.json');
+
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Support large JSON payloads for base64 image uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(UPLOADS_DIR));
+
+// -------------------------------------------------------------
+// SECURE AUTHENTICATION UTILS (Node.js native scrypt & tokens)
+// -------------------------------------------------------------
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derivedKey = crypto.scryptSync(password, salt, 64);
+  return `${salt}:${derivedKey.toString('hex')}`;
+}
+
+function verifyPassword(password: string, combinedHash: string): boolean {
+  try {
+    const [salt, key] = combinedHash.split(':');
+    const keyBuffer = Buffer.from(key, 'hex');
+    const derivedKey = crypto.scryptSync(password, salt, 64);
+    return crypto.timingSafeEqual(keyBuffer, derivedKey);
+  } catch {
+    return false;
+  }
+}
+
+// Active sessions: token -> { username, createdAt }
+const activeSessions = new Map<string, { username: string; createdAt: number }>();
+
+// -------------------------------------------------------------
+// DEFAULT SCRAPBOOK STORE DATA (Dark Academia 10/12)
+// -------------------------------------------------------------
+const defaultStoreData = {
+  admin: {
+    username: 'Admin',
+    passwordHash: hashPassword('123456789'),
+    mustChangePassword: true,
+  },
+  themeSettings: {
+    mainBg: '#111111',
+    secondaryBg: '#1B1B1B',
+    cardBg: '#22201E',
+    textPrimary: '#F0EBDD',
+    textSecondary: '#A8A29A',
+    accentColor: '#B9A58A',
+    borderColor: '#38342F',
+    headingFont: 'Caveat',
+    bodyFont: 'Be Vietnam Pro',
+    borderRadius: '16px',
+    enableAnimations: true,
+    enableScrapbookEffects: true,
+  },
+  layoutSettings: {
+    galleryLayout: 'masonry', // 'masonry' | 'grid' | 'polaroid' | 'list'
+    gallerySpacing: 'normal', // 'compact' | 'normal' | 'relaxed'
+    polaroidTilt: true,
+    sectionOrder: ['hero', 'notes', 'about', 'members', 'gallery', 'journal', 'activities'],
+    visibleSections: {
+      hero: true,
+      notes: true,
+      about: true,
+      members: true,
+      gallery: true,
+      journal: true,
+      activities: true,
+    },
+  },
+  classInfo: {
+    name: '10/12',
+    school: 'Trường THPT Chuyên Nguyễn Huệ',
+    academicYear: '2024 - 2027',
+    startDate: '2024-09-05',
+    slogan: '10/12 – Đoàn kết là chấp hết, thanh xuân không thể lặp lại.',
+    heroTitle: 'WELCOME TO OUR LITTLE WORLD',
+    heroSubtitle: 'Một tập thể, hàng ngàn kỷ niệm, một thanh xuân không thể lặp lại.',
+    heroDescription: 'Cuốn sổ lưu bút điện tử lưu giữ từng nụ cười, trang vở, tà áo trắng và những khoảnh khắc vô giá của 42 trái tim dưới mái trường THPT.',
+    coverImage: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=1200&auto=format&fit=crop',
+    headTeacher: {
+      name: 'Cô Hoàng Thị Mai Lan',
+      subject: 'Môn: Ngữ Văn',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=600&auto=format&fit=crop',
+      message: 'Gửi 10/12 yêu dấu! Ba năm cấp 3 sẽ trôi qua tựa một cái chớp mắt. Cô mong các con hãy luôn giữ trọn ngọn lửa đam mê, biết yêu thương, sẻ chia và cùng nhau viết nên những trang thanh xuân rực rỡ nhất!',
+      phone: '0988.***.888',
+      email: 'mailan.thpt@edu.vn',
+    },
+    totalMembers: 42,
+    classIntroduction: 'Tập thể 10/12 là sự kết tinh của 42 cá tính độc đáo: vừa chăm ngoan học giỏi, vừa bùng nổ nhiệt huyết trong mọi phong trào văn nghệ, hội trại và thể thao.',
+    quoteNotice: 'Thanh xuân không phải là một quãng thời gian, mà là cảm xúc chúng ta dành cho nhau trong từng khoảnh khắc ấy.',
+  },
+  members: [
+    {
+      id: 'm1',
+      name: 'Nguyễn Minh Quân',
+      nickname: 'Quân Cận',
+      role: 'Lớp trưởng',
+      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=600&auto=format&fit=crop',
+      bio: 'Làm việc gì cũng phải hết mình, vừa chơi giỏi vừa học đỉnh!',
+      birthday: '2009-03-15',
+      order: 1,
+    },
+    {
+      id: 'm2',
+      name: 'Trần Đặng Bảo Châu',
+      nickname: 'Châu Miu',
+      role: 'Bí thư Chi đoàn',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600&auto=format&fit=crop',
+      bio: 'Mỉm cười mỗi sớm mai, thanh xuân là phải tràn đầy năng lượng tích cực.',
+      birthday: '2009-08-22',
+      order: 2,
+    },
+    {
+      id: 'm3',
+      name: 'Lê Hoàng Hải Nam',
+      nickname: 'Nam Bách Khoa',
+      role: 'Lớp phó Học tập',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop',
+      bio: 'Toán học không chỉ là con số, đó là tư duy khám phá thế giới.',
+      birthday: '2009-06-18',
+      order: 3,
+    },
+    {
+      id: 'm4',
+      name: 'Phạm Phương Thảo',
+      nickname: 'Thảo Thảo',
+      role: 'Lớp phó Lao động',
+      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=600&auto=format&fit=crop',
+      bio: 'Lớp sạch thì tâm mới sáng, bánh tráng trộn là chân lý!',
+      birthday: '2009-10-05',
+      order: 4,
+    },
+    {
+      id: 'm5',
+      name: 'Hoàng Quốc Anh',
+      nickname: 'Anh Béo',
+      role: 'Lớp phó Văn Thể Mỹ',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=600&auto=format&fit=crop',
+      bio: 'Cuộc đời không có âm nhạc và thể thao thì buồn tẻ biết mấy!',
+      birthday: '2009-12-03',
+      order: 5,
+    },
+    {
+      id: 'm6',
+      name: 'Vũ Ngọc Khánh Linh',
+      nickname: 'Linh Kẹo',
+      role: 'Tổ trưởng Tổ 1',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=600&auto=format&fit=crop',
+      bio: 'Tổ 1 không mạnh vì một cá nhân, mà vì chúng mình là một gia đình.',
+      birthday: '2009-04-12',
+      order: 6,
+    },
+    {
+      id: 'm7',
+      name: 'Đặng Tuấn Kiệt',
+      nickname: 'Kiệt Pro',
+      role: 'Thành viên',
+      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=600&auto=format&fit=crop',
+      bio: 'Tốc độ là chìa khóa để dẫn đầu trên sân cỏ.',
+      birthday: '2009-01-28',
+      order: 7,
+    },
+    {
+      id: 'm8',
+      name: 'Ngô Thuỳ Dung',
+      nickname: 'Dung Dế',
+      role: 'Thành viên',
+      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=600&auto=format&fit=crop',
+      bio: 'Sống dịu dàng giữa thế gian rực rỡ.',
+      birthday: '2009-07-14',
+      order: 8,
+    },
+  ],
+  albums: [
+    { id: 'alb_1', title: 'Khai Giảng Năm Học Mới', description: 'Ngày đầu tiên chúng mình là một tập thể dưới mái trường cấp 3', cover: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=1200&auto=format&fit=crop' },
+    { id: 'alb_2', title: 'Tri Ân Thầy Cô 20/11', description: 'Hoa tươi và những tiết mục văn nghệ chân thành kính dâng thầy cô', cover: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=1200&auto=format&fit=crop' },
+    { id: 'alb_3', title: 'Hội Trại Thanh Xuân 26/3', description: 'Đêm lửa trại bùng cháy, tiếng hò reo kéo co và kỷ niệm khó quên', cover: 'https://images.unsplash.com/photo-1475483768296-6163e08872a1?q=80&w=1200&auto=format&fit=crop' },
+    { id: 'alb_4', title: 'Dã Ngoại & Sinh Nhật', description: 'Những buổi liên hoan tràn ngập tiếng cười và bánh ngọt', cover: 'https://images.unsplash.com/photo-1472653431158-6364773b2a56?q=80&w=1200&auto=format&fit=crop' },
+  ],
+  gallery: [
+    {
+      id: 'img_1',
+      title: 'Lễ Khai Giảng Đầu Cấp 3',
+      caption: 'Tiếng trống trường điểm giờ khai trường. Những ánh mắt sáng bừng bỡ ngỡ nhưng ngập tràn ước mơ.',
+      url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=1200&auto=format&fit=crop',
+      albumId: 'alb_1',
+      date: '2024-09-05',
+      frameStyle: 'polaroid',
+      aspectRatio: '4:3',
+      isFeatured: true,
+      order: 1,
+    },
+    {
+      id: 'img_2',
+      title: 'Áo Dài Trắng Nắng Sân Trường',
+      caption: 'Tà áo dài trắng tinh khôi của các bạn nữ 10/12 dưới bóng râm sân trường.',
+      url: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?q=80&w=1200&auto=format&fit=crop',
+      albumId: 'alb_1',
+      date: '2024-09-05',
+      frameStyle: 'polaroid',
+      aspectRatio: '3:4',
+      isFeatured: false,
+      order: 2,
+    },
+    {
+      id: 'img_3',
+      title: 'Tri Ân Thầy Cô 20/11',
+      caption: 'Cả lớp chuẩn bị bó hoa tươi thắm tặng cô Mai Lan.',
+      url: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=1200&auto=format&fit=crop',
+      albumId: 'alb_2',
+      date: '2024-11-20',
+      frameStyle: 'polaroid',
+      aspectRatio: '16:9',
+      isFeatured: true,
+      order: 3,
+    },
+    {
+      id: 'img_4',
+      title: 'Đêm Lửa Trại 26/3',
+      caption: 'Ngọn lửa bốc cao soi sáng những nụ cười rạng rỡ của 42 thành viên.',
+      url: 'https://images.unsplash.com/photo-1475483768296-6163e08872a1?q=80&w=1200&auto=format&fit=crop',
+      albumId: 'alb_3',
+      date: '2025-03-26',
+      frameStyle: 'polaroid',
+      aspectRatio: '4:3',
+      isFeatured: true,
+      order: 4,
+    },
+    {
+      id: 'img_5',
+      title: 'Chuyến Dã Ngoại Sinh Thái',
+      caption: 'Cùng nhau nướng thịt, hát ca bên đồi cỏ xanh ngát.',
+      url: 'https://images.unsplash.com/photo-1472653431158-6364773b2a56?q=80&w=1200&auto=format&fit=crop',
+      albumId: 'alb_4',
+      date: '2025-01-12',
+      frameStyle: 'square',
+      aspectRatio: '1:1',
+      isFeatured: false,
+      order: 5,
+    },
+    {
+      id: 'img_6',
+      title: 'Học Nhóm Giờ Ra Chơi',
+      caption: 'Bàn bạc giải bài toán khó và cùng chia sẻ từng gói snack.',
+      url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&auto=format&fit=crop',
+      albumId: 'alb_4',
+      date: '2025-02-18',
+      frameStyle: 'polaroid',
+      aspectRatio: '4:3',
+      isFeatured: false,
+      order: 6,
+    },
+  ],
+  journals: [
+    {
+      id: 'j1',
+      title: 'Trang Nhật Ký Ngày Đầu Tiên Chúng Ta Gặp Nhau',
+      content: 'Ngày 5 tháng 9 năm 2024. Tiếng trống trường ngân vang trong trẻo. Chúng mình bước vào lớp 10/12 với những ánh mắt lạ lẫm nhưng ấm áp. Những chiếc bàn gỗ còn vương mùi sơn mới, tấm bảng xanh chưa kịp bám bụi phấn. Thế rồi tiếng cười phá tan sự ngượng ngùng, và một hành trình thanh xuân tuyệt đẹp chính thức bắt đầu...',
+      author: 'Ban Truyền Thông 10/12',
+      date: '2024-09-05',
+      image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=800&auto=format&fit=crop',
+    },
+    {
+      id: 'j2',
+      title: 'Cơn Mưa Rào Tháng Mười Một & Bức Tranh Tặng Cô',
+      content: 'Suốt hai tuần lễ chuẩn bị cho ngày 20/11, lớp mình ở lại sau giờ tan học tới tận sẩm tối. Cả hội chụm đầu cắt dán báo tường, tập bài múa nón lá. Khi cô Mai Lan bước vào lớp và nhìn thấy lẵng hoa cùng bài thơ cả lớp viết tay, cô đã rơi nước mắt vì xúc động. Kỷ niệm ấy sẽ luôn ấm áp trong tim mỗi chúng mình.',
+      author: 'Châu Miu (Bí thư)',
+      date: '2024-11-20',
+      image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=800&auto=format&fit=crop',
+    },
+    {
+      id: 'j3',
+      title: 'Chiếc Cúp Kéo Co & Tiếng Hò Reo Khản Giọng',
+      content: 'Chưa bao giờ tinh thần 10/12 lại rực lửa đến thế. 10 bạn thi đấu nghiến chặt răng, hai bàn tay rát bỏng vì sợi dây thừng. 32 bạn còn lại hò hét vang dội cả sân vận động trường. Giây phút chiếc khăn đỏ vượt qua vạch chiến thắng, cả lớp ùa vào ôm chầm lấy nhau trong niềm vui vỡ òa!',
+      author: 'Quân Cận (Lớp trưởng)',
+      date: '2025-03-26',
+      image: 'https://images.unsplash.com/photo-1475483768296-6163e08872a1?q=80&w=800&auto=format&fit=crop',
+    },
+  ],
+  activities: [
+    {
+      id: 'act_1',
+      title: 'Hội Trại Truyền Thống 26/3',
+      category: 'Phong trào',
+      date: '2025-03-26',
+      description: 'Dựng lều trại bằng tre nứa, thi nấu ăn dân gian, kéo co đạt giải Nhất toàn trường và đêm lửa trại rực rỡ.',
+      image: 'https://images.unsplash.com/photo-1475483768296-6163e08872a1?q=80&w=800&auto=format&fit=crop',
+    },
+    {
+      id: 'act_2',
+      title: 'Hội Diễn Văn Nghệ Tri Ân Thầy Cô',
+      category: 'Văn nghệ',
+      date: '2024-11-19',
+      description: 'Tiết mục múa đương đại kết hợp hát tốp ca đoạt Giải Nhì khối 10 trường THPT Chuyên Nguyễn Huệ.',
+      image: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?q=80&w=800&auto=format&fit=crop',
+    },
+    {
+      id: 'act_3',
+      title: 'Giải Bóng Đá Nam Nữ Cấp Trường',
+      category: 'Thể thao',
+      date: '2024-10-15',
+      description: 'Đội tuyển bóng đá 10/12 cống hiến những trận cầu mãn nhãn và tinh thần thể thao cao thượng.',
+      image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=800&auto=format&fit=crop',
+    },
+    {
+      id: 'act_4',
+      title: 'Sinh Nhật Chung & Tiệc Giáng Sinh',
+      category: 'Liên hoan',
+      date: '2024-12-24',
+      description: 'Cùng thổi nến sinh nhật, trao đổi thiệp giáng sinh tự làm và thưởng thức bánh kem ngọt ngào.',
+      image: 'https://images.unsplash.com/photo-1472653431158-6364773b2a56?q=80&w=800&auto=format&fit=crop',
+    },
+  ],
+};
+
+// Load or initialize store
+function loadStore() {
+  try {
+    if (fs.existsSync(STORE_PATH)) {
+      const raw = fs.readFileSync(STORE_PATH, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.error('Error reading store file, using default data:', err);
+  }
+  saveStore(defaultStoreData);
+  return defaultStoreData;
+}
+
+function saveStore(data: typeof defaultStoreData) {
+  try {
+    fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    return true;
+  } catch (err) {
+    console.error('Error saving store file:', err);
+    return false;
+  }
+}
+
+let store = loadStore();
+
+// -------------------------------------------------------------
+// AUTH MIDDLEWARE
+// -------------------------------------------------------------
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Chưa đăng nhập hoặc thiếu token xác thực' });
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+  const session = activeSessions.get(token);
+  if (!session) {
+    res.status(401).json({ error: 'Phiên làm việc đã hết hạn hoặc không hợp lệ' });
+    return;
+  }
+
+  // Session valid
+  (req as unknown as { user: typeof session }).user = session;
+  next();
+}
+
+// -------------------------------------------------------------
+// API ROUTES
+// -------------------------------------------------------------
+
+// 1. Auth: Login
+app.post('/api/auth/login', (req: Request, res: Response) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    res.status(400).json({ error: 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu' });
+    return;
+  }
+
+  // Check admin username (case-insensitive for convenience)
+  if (username.trim().toLowerCase() !== store.admin.username.toLowerCase()) {
+    res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
+    return;
+  }
+
+  const isValid = verifyPassword(password, store.admin.passwordHash);
+  if (!isValid) {
+    res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
+    return;
+  }
+
+  // Generate secure session token
+  const token = crypto.randomBytes(32).toString('hex');
+  activeSessions.set(token, {
+    username: store.admin.username,
+    createdAt: Date.now(),
+  });
+
+  res.json({
+    success: true,
+    token,
+    user: {
+      username: store.admin.username,
+      mustChangePassword: store.admin.mustChangePassword,
+    },
+  });
+});
+
+// 2. Auth: Check session (me)
+app.get('/api/auth/me', requireAdmin, (_req: Request, res: Response) => {
+  res.json({
+    authenticated: true,
+    user: {
+      username: store.admin.username,
+      mustChangePassword: store.admin.mustChangePassword,
+    },
+  });
+});
+
+// 3. Auth: Change password
+app.post('/api/auth/change-password', requireAdmin, (req: Request, res: Response) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: 'Vui lòng cung cấp mật khẩu hiện tại và mật khẩu mới' });
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    return;
+  }
+
+  const isValid = verifyPassword(currentPassword, store.admin.passwordHash);
+  if (!isValid) {
+    res.status(400).json({ error: 'Mật khẩu hiện tại không chính xác' });
+    return;
+  }
+
+  // Update password
+  store.admin.passwordHash = hashPassword(newPassword);
+  store.admin.mustChangePassword = false;
+  saveStore(store);
+
+  res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+});
+
+// 4. Auth: Logout
+app.post('/api/auth/logout', (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    activeSessions.delete(token);
+  }
+  res.json({ success: true });
+});
+
+// 5. Public Content: Get all content
+app.get('/api/content', (_req: Request, res: Response) => {
+  // Return all public store content (exclude password hash)
+  const { admin: _unused, ...publicContent } = store;
+  res.json(publicContent);
+});
+
+// 6. Admin Content: Update content
+app.put('/api/content', requireAdmin, (req: Request, res: Response) => {
+  try {
+    const updates = req.body;
+
+    if (updates.classInfo) store.classInfo = { ...store.classInfo, ...updates.classInfo };
+    if (updates.themeSettings) store.themeSettings = { ...store.themeSettings, ...updates.themeSettings };
+    if (updates.layoutSettings) store.layoutSettings = { ...store.layoutSettings, ...updates.layoutSettings };
+    if (updates.members) store.members = updates.members;
+    if (updates.albums) store.albums = updates.albums;
+    if (updates.gallery) store.gallery = updates.gallery;
+    if (updates.journals) store.journals = updates.journals;
+    if (updates.activities) store.activities = updates.activities;
+
+    saveStore(store);
+    const { admin: _unused, ...publicContent } = store;
+    res.json({ success: true, message: 'Lưu thay đổi thành công!', data: publicContent });
+  } catch (err) {
+    res.status(500).json({ error: 'Lỗi khi lưu dữ liệu lên hệ thống' });
+  }
+});
+
+// 7. Admin: Upload image (supports base64 image data)
+app.post('/api/upload', requireAdmin, (req: Request, res: Response) => {
+  try {
+    const { dataUrl, filename } = req.body;
+    if (!dataUrl || !dataUrl.includes('base64,')) {
+      res.status(400).json({ error: 'Dữ liệu ảnh không hợp lệ' });
+      return;
+    }
+
+    const matches = dataUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      res.status(400).json({ error: 'Định dạng base64 không đúng' });
+      return;
+    }
+
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const ext = mimeType.split('/')[1] || 'png';
+    const safeName = `${Date.now()}_${(filename || 'image').replace(/[^a-zA-Z0-9_-]/g, '')}.${ext}`;
+    const filePath = path.join(UPLOADS_DIR, safeName);
+
+    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+
+    const fileUrl = `/uploads/${safeName}`;
+    res.json({ success: true, url: fileUrl });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: 'Không thể lưu tệp ảnh lên máy chủ' });
+  }
+});
+
+// 8. Admin: Reset to default content
+app.post('/api/content/reset', requireAdmin, (_req: Request, res: Response) => {
+  store = JSON.parse(JSON.stringify(defaultStoreData));
+  saveStore(store);
+  const { admin: _unused, ...publicContent } = store;
+  res.json({ success: true, message: 'Đã khôi phục dữ liệu mặc định!', data: publicContent });
+});
+
+// -------------------------------------------------------------
+// VITE OR STATIC FRONTEND
+// -------------------------------------------------------------
+async function setupFrontend() {
+  if (!isProd) {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.resolve(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (_req: Request, res: Response) => {
+      res.sendFile(path.resolve(distPath, 'index.html'));
+    });
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Class 10/12 server running at http://localhost:${PORT}`);
+  });
+}
+
+setupFrontend().catch((err) => {
+  console.error('Failed to start server:', err);
+});
